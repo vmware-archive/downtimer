@@ -78,13 +78,13 @@ func (c *Prober) Probe() Result {
 	start := time.Now()
 	resp, err := c.client.Get(c.url)
 	if err != nil {
-		return Result{Error: err}
+		return Result{Timestamp: start, Error: err}
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	end := time.Now()
 	if err != nil {
-		return Result{Error: err}
+		return Result{Timestamp: start, Error: err}
 	}
 	success := 0
 	if resp.StatusCode == 200 {
