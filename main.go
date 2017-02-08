@@ -7,7 +7,7 @@ import (
 	"time"
 
 	flags "github.com/jessevdk/go-flags"
-	"github.com/pivotal-cf/downdog/clients"
+	"github.com/pivotal-cf/downtimer/clients"
 )
 
 type Opts struct {
