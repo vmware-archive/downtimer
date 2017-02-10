@@ -12,16 +12,15 @@ import (
 
 type Opts struct {
 	URL      string `short:"u" long:"url" description:"URL to probe"`
-	Duration string `short:"d" long:"duration" description:"How long to probe for, forever by default"`
-	Interval string `short:"i" long:"interval" description:"interval at which to probe"`
+	Duration string `short:"d" long:"duration" description:"How long to probe for, forever by default" default:"0s"`
+	Interval string `short:"i" long:"interval" description:"interval at which to probe" default:"1s"`
 }
 
 func main() {
 	opts := Opts{}
 	_, err := flags.ParseArgs(&opts, os.Args)
 	if err != nil {
-		// TODO: print nice usage
-		panic(err)
+		os.Exit(1)
 	}
 
 	probeURL := opts.URL
