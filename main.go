@@ -14,6 +14,7 @@ type Opts struct {
 	URL      string `short:"u" long:"url" description:"URL to probe"`
 	Duration string `short:"d" long:"duration" description:"How long to probe for, forever by default" default:"0s"`
 	Interval string `short:"i" long:"interval" description:"interval at which to probe" default:"1s"`
+	CACert   string `short:"c" long:"ca-cert" description:"CA cert for bosh"`
 }
 
 func main() {
