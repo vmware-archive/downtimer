@@ -20,22 +20,32 @@ type Result struct {
 }
 
 type Prober struct {
-	url    string
-	client http.Client
+	url     string
+	client  http.Client
+	outfile *os.File
 }
 
-func NewProber(url string, insecureSkipVerify bool) *Prober {
+type DeploymentTimes map[int64][]string
+
+func NewProber(url string, insecureSkipVerify bool, outFile string) (*Prober, error) {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify},
 	}
+
+	file, err := os.Create(outFile)
+	if err != nil {
+		return nil, err
+	}
+
 	prober := Prober{
 		url,
 		http.Client{Transport: transport},
+		file,
 	}
-	return &prober
+	return &prober, nil
 }
 
-func (c *Prober) RecordDowntime(interval, duration time.Duration) {
+func (p *Prober) RecordDowntime(interval, duration time.Duration) {
 	// duration == 0
 	//
 	// duration != 0
@@ -52,15 +62,23 @@ func (c *Prober) RecordDowntime(interval, duration time.Duration) {
 		}
 	}
 
-	csvWriter := csv.NewWriter(os.Stdout)
+	csvWriter := csv.NewWriter(p.outfile)
+	defer p.outfile.Close()
 	for keepGoing() {
 		go func() {
-			row := getCvsRow(c.Probe())
+			row := getCvsRow(p.Probe())
 			_ = csvWriter.Write(row)
 			csvWriter.Flush()
 		}()
 		time.Sleep(interval)
 	}
+}
+
+func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) {
+	// read line by line, get timestamp
+	// check against our struct
+	// add annotations as needed
+	// write the row
 }
 
 func getCvsRow(result Result) []string {
