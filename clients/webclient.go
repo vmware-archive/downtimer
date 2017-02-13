@@ -89,6 +89,7 @@ func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) error {
 	defer annotatedFile.Close()
 	csvReader := csv.NewReader(inputFile)
 	defer inputFile.Close()
+
 	for {
 		record, err := csvReader.Read()
 		if err == io.EOF {
@@ -104,7 +105,6 @@ func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) error {
 		}
 
 		annotations, exists := timestamps[timestamp]
-
 		if exists {
 			annotationString := strings.Join(annotations, " | ")
 			record = append(record, annotationString)
@@ -112,6 +112,8 @@ func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) error {
 		csvWriter.Write(record)
 		csvWriter.Flush()
 	}
+
+	os.Rename(p.opts.OutputFile+"-annotated", p.opts.OutputFile)
 	return nil
 }
 
@@ -126,7 +128,6 @@ func getCvsRow(result Result) []string {
 }
 
 func (c *Prober) Probe() Result {
-	// curl
 	start := time.Now()
 	resp, err := c.client.Get(c.url)
 	if err != nil {
