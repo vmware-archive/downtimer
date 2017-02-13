@@ -3,10 +3,12 @@ package clients
 import (
 	"crypto/tls"
 	"encoding/csv"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -40,11 +42,7 @@ func NewProber(opts *Opts) (*Prober, error) {
 	return &prober, nil
 }
 
-func (p *Prober) RecordDowntime(interval, duration time.Duration) {
-	// duration == 0
-	//
-	// duration != 0
-
+func (p *Prober) RecordDowntime(interval, duration time.Duration) error {
 	var keepGoing func() bool
 	if duration == 0 {
 		keepGoing = func() bool {
@@ -72,13 +70,49 @@ func (p *Prober) RecordDowntime(interval, duration time.Duration) {
 		}()
 		time.Sleep(interval)
 	}
+	return nil
 }
 
-func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) {
-	// read line by line, get timestamp
-	// check against our struct
-	// add annotations as needed
-	// write the row
+func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) error {
+
+	annotatedFile, err := os.Create(p.opts.OutputFile + "-annotated")
+	if err != nil {
+		return err
+	}
+
+	inputFile, err := os.Open(p.opts.OutputFile)
+	if err != nil {
+		return err
+	}
+
+	csvWriter := csv.NewWriter(annotatedFile)
+	defer annotatedFile.Close()
+	csvReader := csv.NewReader(inputFile)
+	defer inputFile.Close()
+	for {
+		record, err := csvReader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		timestamp, err := strconv.ParseInt(record[0], 10, 64)
+		if err != nil {
+			return err
+		}
+
+		annotations, exists := timestamps[timestamp]
+
+		if exists {
+			annotationString := strings.Join(annotations, " | ")
+			record = append(record, annotationString)
+		}
+		csvWriter.Write(record)
+		csvWriter.Flush()
+	}
+	return nil
 }
 
 func getCvsRow(result Result) []string {
