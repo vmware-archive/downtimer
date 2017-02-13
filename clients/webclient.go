@@ -20,27 +20,22 @@ type Result struct {
 }
 
 type Prober struct {
-	url     string
-	client  http.Client
-	outfile *os.File
+	url    string
+	client http.Client
+	opts   *Opts
 }
 
 type DeploymentTimes map[int64][]string
 
-func NewProber(url string, insecureSkipVerify bool, outFile string) (*Prober, error) {
+func NewProber(opts *Opts) (*Prober, error) {
 	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify},
-	}
-
-	file, err := os.Create(outFile)
-	if err != nil {
-		return nil, err
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.InsecureSkipVerify},
 	}
 
 	prober := Prober{
-		url,
+		opts.URL,
 		http.Client{Transport: transport},
-		file,
+		opts,
 	}
 	return &prober, nil
 }
@@ -62,8 +57,13 @@ func (p *Prober) RecordDowntime(interval, duration time.Duration) {
 		}
 	}
 
-	csvWriter := csv.NewWriter(p.outfile)
-	defer p.outfile.Close()
+	outfile, err := os.Create(p.opts.OutputFile)
+	if err != nil {
+		return err
+	}
+
+	csvWriter := csv.NewWriter(outfile)
+	defer outfile.Close()
 	for keepGoing() {
 		go func() {
 			row := getCvsRow(p.Probe())
