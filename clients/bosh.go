@@ -2,12 +2,52 @@ package clients
 
 import (
 	"io/ioutil"
+	"log"
+	"time"
 
 	"github.com/cloudfoundry/bosh-cli/director"
 	"github.com/cloudfoundry/bosh-cli/uaa"
 	"github.com/cloudfoundry/bosh-utils/errors"
 	"github.com/cloudfoundry/bosh-utils/logger"
 )
+
+func getCurrentTaskId(bosh director.Director) (int, error) {
+	currentTasks, err := bosh.CurrentTasks(director.TasksFilter{})
+	if err != nil {
+		return 0, err
+	}
+	var currentTaskId int
+	for _, task := range currentTasks {
+		if task.Description() == "create deployment" {
+			currentTaskId = task.ID()
+			break
+		}
+	}
+	return currentTaskId, nil
+}
+
+func WaitForTaskId(bosh director.Director, timeout time.Duration) int {
+	timeoutChannel := time.After(timeout)
+	tick := time.Tick(5 * time.Second)
+
+	for {
+		select {
+		case <-timeoutChannel:
+			log.Println("Bailed on getting the Task ID")
+			return 0
+		case <-tick:
+			log.Println("Pulling Bosh for Deployment Task")
+			id, err := getCurrentTaskId(bosh)
+			if err != nil {
+				log.Println(err)
+			}
+
+			if id != 0 {
+				return id
+			}
+		}
+	}
+}
 
 func anonymousUserConfig(host string, port int, CACert string) director.Config {
 	return director.Config{

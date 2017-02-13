@@ -3,13 +3,17 @@ package clients
 import (
 	"crypto/tls"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/cloudfoundry/bosh-cli/director"
 )
 
 type Result struct {
@@ -25,11 +29,12 @@ type Prober struct {
 	url    string
 	client http.Client
 	opts   *Opts
+	bosh   director.Director
 }
 
 type DeploymentTimes map[int64][]string
 
-func NewProber(opts *Opts) (*Prober, error) {
+func NewProber(opts *Opts, bosh director.Director) (*Prober, error) {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.InsecureSkipVerify},
 	}
@@ -38,18 +43,33 @@ func NewProber(opts *Opts) (*Prober, error) {
 		opts.URL,
 		http.Client{Transport: transport},
 		opts,
+		bosh,
 	}
 	return &prober, nil
 }
 
 func (p *Prober) RecordDowntime(interval, duration time.Duration) error {
+
 	var keepGoing func() bool
-	if duration == 0 {
-		keepGoing = func() bool {
+
+	if p.opts.BoshTask != "" {
+		keepGoing = func() bool { // probe for as long as the deployment is ongoing
+			taskId, err := getCurrentTaskId(p.bosh)
+			if err != nil {
+				log.Println(err)
+			}
+			optsTaskId, err := strconv.Atoi(p.opts.BoshTask)
+			if err != nil {
+				log.Println(err)
+			}
+			return optsTaskId == taskId
+		}
+	} else if duration == 0 {
+		keepGoing = func() bool { // keep probing indefinitely
 			return true
 		}
 	} else {
-		keepGoing = func() bool {
+		keepGoing = func() bool { // probe for `duration`
 			duration = duration - interval
 			return duration >= 0
 		}
@@ -81,6 +101,7 @@ func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) error {
 	}
 
 	inputFile, err := os.Open(p.opts.OutputFile)
+
 	if err != nil {
 		return err
 	}
@@ -105,8 +126,10 @@ func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) error {
 		}
 
 		annotations, exists := timestamps[timestamp]
+
 		if exists {
-			annotationString := strings.Join(annotations, " | ")
+			fmt.Println(annotations)
+			annotationString := strings.Join(annotations, "\n")
 			record = append(record, annotationString)
 		}
 		csvWriter.Write(record)

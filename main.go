@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cloudfoundry/bosh-cli/director"
@@ -23,8 +25,34 @@ func main() {
 
 		panic(err)
 	}
-	eventsFilter := director.EventsFilter{Task: opts.BoshTask}
 
+	if opts.BoshTask == "" {
+		opts.BoshTask = strconv.Itoa(clients.WaitForTaskId(bosh, 100*time.Second))
+	}
+
+	probeURL := opts.URL
+	interval, err := time.ParseDuration(opts.Interval)
+	if err != nil {
+		panic(err)
+	}
+	duration, err := time.ParseDuration(opts.Duration)
+	if err != nil {
+		panic(err)
+	}
+	prober, err := clients.NewProber(&opts, bosh)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println(fmt.Sprintf("Starting to probe %s every %s seconds", probeURL, interval))
+	prober.RecordDowntime(interval, duration)
+
+	timestamps := getDeploymentTimes(bosh, opts.BoshTask)
+	log.Println(prober.AnnotateWithTimestamps(timestamps))
+}
+
+func getDeploymentTimes(bosh director.Director, taskID string) clients.DeploymentTimes {
+	eventsFilter := director.EventsFilter{Task: taskID}
 	events, err := bosh.Events(eventsFilter)
 	if err != nil {
 		panic(err)
@@ -39,28 +67,14 @@ func main() {
 				timestamps[eventTime] = []string{}
 			}
 			// Event with empty context is the end time.
+			instanceParts := strings.Split(event.Instance(), "/")
+			instanceName := instanceParts[0]
 			if len(event.Context()) == 0 {
-				timestamps[eventTime] = append(timestamps[eventTime], event.Instance()+" done")
+				timestamps[eventTime] = append(timestamps[eventTime], instanceName+" done")
 			} else {
-				timestamps[eventTime] = append(timestamps[eventTime], event.Instance()+" start")
+				timestamps[eventTime] = append(timestamps[eventTime], instanceName+" start")
 			}
 		}
 	}
-
-	probeURL := opts.URL
-	interval, err := time.ParseDuration(opts.Interval)
-	if err != nil {
-		panic(err)
-	}
-	duration, err := time.ParseDuration(opts.Duration)
-	if err != nil {
-		panic(err)
-	}
-	prober, err := clients.NewProber(&opts)
-	if err != nil {
-		panic(err)
-	}
-	log.Println(fmt.Sprintf("Starting to probe %s every %s seconds", probeURL, interval))
-	prober.RecordDowntime(interval, duration)
-	prober.AnnotateWithTimestamps(timestamps)
+	return timestamps
 }
