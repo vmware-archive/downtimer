@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/cloudfoundry/bosh-cli/director"
 )
 
 type Result struct {
@@ -29,12 +27,12 @@ type Prober struct {
 	url    string
 	client http.Client
 	opts   *Opts
-	bosh   director.Director
+	bosh   Bosh
 }
 
 type DeploymentTimes map[int64][]string
 
-func NewProber(opts *Opts, bosh director.Director) (*Prober, error) {
+func NewProber(opts *Opts, bosh Bosh) (*Prober, error) {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.InsecureSkipVerify},
 	}
@@ -54,7 +52,7 @@ func (p *Prober) RecordDowntime(interval, duration time.Duration) error {
 
 	if p.opts.BoshTask != "" {
 		keepGoing = func() bool { // probe for as long as the deployment is ongoing
-			taskId, err := getCurrentTaskId(p.bosh)
+			taskId, err := p.bosh.GetCurrentTaskId()
 			if err != nil {
 				log.Println(err)
 			}

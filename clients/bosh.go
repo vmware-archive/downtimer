@@ -3,6 +3,7 @@ package clients
 import (
 	"io/ioutil"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/cloudfoundry/bosh-cli/director"
@@ -11,8 +12,46 @@ import (
 	"github.com/cloudfoundry/bosh-utils/logger"
 )
 
-func getCurrentTaskId(bosh director.Director) (int, error) {
-	currentTasks, err := bosh.CurrentTasks(director.TasksFilter{})
+type Bosh interface {
+	GetDeploymentTimes(taskID string) DeploymentTimes
+	GetCurrentTaskId() (int, error)
+	WaitForTaskId(timeout time.Duration) int
+}
+
+type BoshImpl struct {
+	director director.Director
+}
+
+func (b *BoshImpl) GetDeploymentTimes(taskID string) DeploymentTimes {
+	eventsFilter := director.EventsFilter{Task: taskID}
+	events, err := b.director.Events(eventsFilter)
+	if err != nil {
+		panic(err)
+	}
+
+	timestamps := DeploymentTimes{}
+	for _, event := range events {
+		if event.Action() == "update" && event.ObjectType() == "instance" {
+			eventTime := event.Timestamp().Unix()
+			_, ok := timestamps[eventTime]
+			if !ok {
+				timestamps[eventTime] = []string{}
+			}
+			// Event with empty context is the end time.
+			instanceParts := strings.Split(event.Instance(), "/")
+			instanceName := instanceParts[0]
+			if len(event.Context()) == 0 {
+				timestamps[eventTime] = append(timestamps[eventTime], instanceName+" done")
+			} else {
+				timestamps[eventTime] = append(timestamps[eventTime], instanceName+" start")
+			}
+		}
+	}
+	return timestamps
+}
+
+func (b *BoshImpl) GetCurrentTaskId() (int, error) {
+	currentTasks, err := b.director.CurrentTasks(director.TasksFilter{})
 	if err != nil {
 		return 0, err
 	}
@@ -26,7 +65,7 @@ func getCurrentTaskId(bosh director.Director) (int, error) {
 	return currentTaskId, nil
 }
 
-func WaitForTaskId(bosh director.Director, timeout time.Duration) int {
+func (b *BoshImpl) WaitForTaskId(timeout time.Duration) int {
 	timeoutChannel := time.After(timeout)
 	tick := time.Tick(5 * time.Second)
 
@@ -37,7 +76,7 @@ func WaitForTaskId(bosh director.Director, timeout time.Duration) int {
 			return 0
 		case <-tick:
 			log.Println("Pulling Bosh for Deployment Task")
-			id, err := getCurrentTaskId(bosh)
+			id, err := b.GetCurrentTaskId()
 			if err != nil {
 				log.Println(err)
 			}
@@ -64,7 +103,7 @@ func userConfig(host string, port int, CACert, username, password string) direct
 	return config
 }
 
-func GetDirector(host string, port int, username, password, caCertFile string) (director.Director, error) {
+func GetDirector(host string, port int, username, password, caCertFile string) (*BoshImpl, error) {
 
 	logger := logger.NewLogger(0)
 	caCertBytes, err := ioutil.ReadFile(caCertFile)
@@ -101,7 +140,8 @@ func GetDirector(host string, port int, username, password, caCertFile string) (
 	taskReporter := director.NewNoopTaskReporter()
 	fileReporter := director.NewNoopFileReporter()
 
-	return director.NewFactory(logger).New(dirConfig, taskReporter, fileReporter)
+	director, err := director.NewFactory(logger).New(dirConfig, taskReporter, fileReporter)
+	return &BoshImpl{director}, err
 }
 
 func getUaa(info director.Info, client, clientSecret, CACert string, logger logger.Logger) (uaa.UAA, error) {
