@@ -42,11 +42,22 @@ body {
 
 </style>
 
-<body></body>
+<select onchange="if (this.selectedIndex) renderGraph(this.value);">
+  <option index=-1>Please Select a Trial</option>
+  {{range .}}
+  <option value="{{.}}">{{.}}</option>
+  {{end}}
+</select>
+
+<body>
+
+  <div id="svg"></div>
+</body>
 
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 
+var renderGraph = function(path) {
 
 var margin = {top: 20, right: 50, bottom: 30, left: 50},
     width = 960 - margin.left - margin.right,
@@ -63,7 +74,9 @@ var line = d3.line()
     .x(function(d) { return  x(d.timestamp); })
     .y(function(d) { return y(d.code); });
 
-var g = d3.select("body").append("svg")
+//d3.select("div#svg").select("svg").remove();
+
+var g = d3.select("div#svg").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
     .append("g")
@@ -78,7 +91,7 @@ var drawBoshEvent = function(data) {
  }
 }
 var firstTimestamp = null;
-d3.csv("output.csv", function(d) {
+d3.csv(path, function(d) {
   if (firstTimestamp == null) {
     firstTimestamp = Number(d.timestamp);
   }
@@ -98,8 +111,7 @@ d3.csv("output.csv", function(d) {
   g.append("g")
       .attr("transform", "translate(0," + height + ")")
       .call(d3.axisBottom(x))
-    .select(".domain")
-      .remove();
+    .select(".domain");
 
   g.append("g")
       .call(d3.axisLeft(y))
@@ -168,8 +180,6 @@ d3.csv("output.csv", function(d) {
             d = annotationNode;
           }
 
-          console.log(x0)
-          console.log(focus);
           focus.attr("transform", "translate(" + x(d.timestamp) + "," + y(d.code) + ")");
           focus.selectAll("text").remove();
           var annotations = d.annotation.split('\n');
@@ -177,9 +187,9 @@ d3.csv("output.csv", function(d) {
             var annotation = annotations[b];
             focus.append("text").text(annotation).attr("x", 9).attr("dy", (15*(b) + 15) + "px");
           }
-;
     }
 });
+}
 
 </script>
 
