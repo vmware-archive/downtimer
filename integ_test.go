@@ -24,7 +24,7 @@ var _ = Describe("Downtimer", func() {
 			command := exec.Command(binaryPath, "-u", "http://pivotal.io", "-d", "4s", "-i", "2s")
 			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
+			Eventually(session, 4).Should(gexec.Exit(0))
 		})
 	})
 
