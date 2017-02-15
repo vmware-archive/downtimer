@@ -33,13 +33,14 @@ body {
   stroke: steelblue;
 }
 
-.focus box {
-  display: block;
-  width: 100px;
-  height: 100px;
-  background:red;
+.focus text{
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  fill: white;
 }
-
+.focus rect{
+  fill: #4E4E4E;
+}
 </style>
 
 <select onchange="if (this.selectedIndex) renderGraph(this.value);">
@@ -56,6 +57,22 @@ body {
 
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
+
+function getWidthOfText(txt, fontname, fontsize){
+  // Create a dummy canvas (render invisible with css)
+  var c=document.createElement('canvas');
+  // Get the context of the dummy canvas
+  var ctx=c.getContext('2d');
+  // Set the context.font to the font that you are using
+  ctx.font = fontsize + 'px' + fontname;
+  // Measure the string
+  // !!! <CRUCIAL>  !!!
+  var length = ctx.measureText(txt).width;
+  // !!! </CRUCIAL> !!!
+  // Return width
+  return length;
+}
+
 
 var renderGraph = function(path) {
 
@@ -86,7 +103,8 @@ var drawBoshEvent = function(data) {
  for (i in data){
    if (data[i].annotation) {
        g.append("circle")
-        .attr("r", 4).attr("transform", "translate(" + x(data[i].timestamp) + "," + y(data[i].code) + ")");
+        .attr("fill", "steelblue")
+        .attr("r", 3).attr("transform", "translate(" + x(data[i].timestamp) + "," + y(data[i].code) + ")");
    }
  }
 }
@@ -102,10 +120,8 @@ var getDownTime = function(data){
         first = data[i].timestamp;
       }
       last = data[i].timestamp;
-      console.log(last)
     }
   }
-  console.log(last);
   return {start: x(first), end: x(last)};
 }
 
@@ -119,13 +135,11 @@ d3.csv(path, function(d) {
 }, function(error, data) {
   if (error) throw error;
 
-  console.log(data);
-
   x.domain(d3.extent(data, function(d) { return d.timestamp; }));
   y.domain(d3.extent(data, function(d) { return d.code }));
 
   var downtimeX = getDownTime(data);
-console.log(downtimeX)
+
   g.append("rect")
     .attr("width", downtimeX.end-downtimeX.start)
     .attr("height", "100%")
@@ -153,25 +167,24 @@ console.log(downtimeX)
       .attr("stroke", "steelblue")
       .attr("stroke-linejoin", "round")
       .attr("stroke-linecap", "round")
-      .attr("stroke-width", 1.5)
+      .attr("stroke-width", 2.5)
       .attr("d", line);
 
   drawBoshEvent(data);
 
-
-
   var focus = g.append("g")
       .attr("class", "focus")
+      .attr("fill", "black")
       .style("display", "none");
 
   focus.append("circle")
       .attr("r", 4.5);
 
+  focus.append("rect").attr("fill","#4E4E4E")
+
   focus.append("text")
       .attr("x", 9)
       .attr("dy", ".75em");
-
-
 
   g.append("rect")
       .attr("class", "overlay")
@@ -183,9 +196,8 @@ console.log(downtimeX)
 
     var getAnnotationObjectWithInRange = function (data, i){
       var range = 30;
-      //TODO: CHECK FOR OUT OF BOUNDS
       for (j = i - range; j < i + range; j++) {
-        if (data[j].annotation) {
+        if ( 0 <= j && j < data.length && data[j].annotation) {
           return data[j];
         }
       }
@@ -208,10 +220,31 @@ console.log(downtimeX)
 
           focus.attr("transform", "translate(" + x(d.timestamp) + "," + y(d.code) + ")");
           focus.selectAll("text").remove();
+          focus.selectAll("rect").remove();
+          var focusRect = focus.append("rect");
+
           var annotations = d.annotation.split('\n');
+          var boxHeight = 0;
+          var maxWidth = 0;
           for (b in annotations) {
             var annotation = annotations[b];
-            focus.append("text").text(annotation).attr("x", 9).attr("dy", (15*(b) + 15) + "px");
+            boxHeight = (15*(b) + 30)
+            annotateText = focus.append("text").text(annotation).attr("x", 9).attr("dy", boxHeight + "px");
+            var fontFamily = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+            textWidth = getWidthOfText(annotation, fontFamily, 12);
+            if (textWidth > maxWidth) {
+              maxWidth = textWidth;
+            }
+          }
+
+          if (boxHeight && maxWidth) {
+            focusRect
+              .attr("height", boxHeight + "px")
+              .attr("width", maxWidth + 20 + "px")
+              .attr("rx", 4)
+              .attr("ry", 4)
+              .attr("transform", "translate(" + 0 + "," + 10 + ")");
+
           }
     }
 });
