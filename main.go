@@ -25,7 +25,7 @@ func main() {
 	}
 
 	if opts.BoshTask == "" {
-		opts.BoshTask = strconv.Itoa(bosh.WaitForTaskId(100 * time.Second))
+		opts.BoshTask = strconv.Itoa(bosh.WaitForTaskId(180 * time.Second))
 	}
 
 	probeURL := opts.URL
