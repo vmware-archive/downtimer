@@ -90,13 +90,29 @@ var drawBoshEvent = function(data) {
    }
  }
 }
+
 var firstTimestamp = null;
+
+var getDownTime = function(data){
+  var first = null;
+  var last = null;
+  for (var i = 0; i < data.length; i++) {
+    if(data[i].code != 200) {
+      if(first == null) {
+        first = data[i].timestamp;
+      }
+      last = data[i].timestamp;
+      console.log(last)
+    }
+  }
+  console.log(last);
+  return {start: x(first), end: x(last)};
+}
+
 d3.csv(path, function(d) {
   if (firstTimestamp == null) {
     firstTimestamp = Number(d.timestamp);
   }
-   console.log(firstTimestamp)
-
   var newData = { timestamp: ( Number(d.timestamp) - firstTimestamp), code: d.code, annotation: d.annotation}
   return newData;
 
@@ -107,6 +123,14 @@ d3.csv(path, function(d) {
 
   x.domain(d3.extent(data, function(d) { return d.timestamp; }));
   y.domain(d3.extent(data, function(d) { return d.code }));
+
+  var downtimeX = getDownTime(data);
+console.log(downtimeX)
+  g.append("rect")
+    .attr("width", downtimeX.end-downtimeX.start)
+    .attr("height", "100%")
+    .attr("fill", "pink")
+    .attr("transform", "translate(" + downtimeX.start + "," + 0 + ")"); ;
 
   g.append("g")
       .attr("transform", "translate(0," + height + ")")
@@ -133,6 +157,8 @@ d3.csv(path, function(d) {
       .attr("d", line);
 
   drawBoshEvent(data);
+
+
 
   var focus = g.append("g")
       .attr("class", "focus")
