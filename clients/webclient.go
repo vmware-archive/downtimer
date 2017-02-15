@@ -80,6 +80,7 @@ func (p *Prober) RecordDowntime(interval, duration time.Duration) error {
 
 	csvWriter := csv.NewWriter(outfile)
 	defer outfile.Close()
+	csvWriter.Write([]string{"timestamp", "success", "latency", "code", "size", "", "annotation"})
 	for keepGoing() {
 		go func() {
 			row := getCvsRow(p.Probe())
