@@ -3,7 +3,6 @@ package clients
 import (
 	"crypto/tls"
 	"encoding/csv"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -110,6 +109,13 @@ func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) error {
 	csvReader := csv.NewReader(inputFile)
 	defer inputFile.Close()
 
+	header, err := csvReader.Read()
+	if err != nil {
+		return err
+	}
+	csvReader.FieldsPerRecord = 0
+	csvWriter.Write(header)
+
 	for {
 		record, err := csvReader.Read()
 		if err == io.EOF {
@@ -127,7 +133,6 @@ func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) error {
 		annotations, exists := timestamps[timestamp]
 
 		if exists {
-			fmt.Println(annotations)
 			annotationString := strings.Join(annotations, "\n")
 			record = append(record, annotationString)
 		}
