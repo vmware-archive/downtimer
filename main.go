@@ -1,50 +1,66 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"time"
 
-	flags "github.com/jessevdk/go-flags"
+	"github.com/jessevdk/go-flags"
 	"github.com/pivotal-cf/downtimer/clients"
 )
 
 func main() {
 	opts := clients.Opts{}
-	_, err := flags.ParseArgs(&opts, os.Args)
+	err := ParseArgs(&opts, os.Args)
 	if err != nil {
 		os.Exit(1)
 	}
 
-	bosh, err := clients.GetDirector(opts.BoshHost, 25555, opts.BoshUser, opts.BoshPassword, opts.CACert)
-	if err != nil {
+	var bosh *clients.BoshImpl
 
-		panic(err)
+	if useBosh(&opts) {
+		bosh, err = clients.GetDirector(opts.BoshHost, 25555, opts.BoshUser, opts.BoshPassword, opts.BoshCACert)
+		if err != nil {
+			panic(err)
+		}
+
+		if opts.BoshTask == "" {
+			opts.BoshTask = strconv.Itoa(bosh.WaitForTaskId(180 * time.Second))
+		}
 	}
 
-	if opts.BoshTask == "" {
-		opts.BoshTask = strconv.Itoa(bosh.WaitForTaskId(180 * time.Second))
-	}
-
-	probeURL := opts.URL
-	interval, err := time.ParseDuration(opts.Interval)
-	if err != nil {
-		panic(err)
-	}
-	duration, err := time.ParseDuration(opts.Duration)
-	if err != nil {
-		panic(err)
-	}
 	prober, err := clients.NewProber(&opts, bosh)
 	if err != nil {
 		panic(err)
 	}
 
-	log.Println(fmt.Sprintf("Starting to probe %s every %s seconds", probeURL, interval))
-	prober.RecordDowntime(interval, duration)
+	log.Println(fmt.Sprintf("Starting to probe %s every %s seconds", opts.URL, opts.Interval))
+	prober.RecordDowntime()
 
-	timestamps := bosh.GetDeploymentTimes(opts.BoshTask)
-	log.Println(prober.AnnotateWithTimestamps(timestamps))
+	if useBosh(&opts) {
+		timestamps := bosh.GetDeploymentTimes(opts.BoshTask)
+		log.Println(prober.AnnotateWithTimestamps(timestamps))
+	}
+}
+
+func ParseArgs(opts *clients.Opts, args []string) error {
+	_, err := flags.ParseArgs(opts, args)
+	if err != nil {
+		return err
+	}
+
+	if useBosh(opts) {
+		if opts.BoshHost == "" || opts.BoshUser == "" || opts.BoshPassword == "" || opts.BoshCACert == "" {
+			return errors.New("all bosh options must be specified")
+		}
+	}
+
+	return nil
+}
+
+func useBosh(opts *clients.Opts) bool {
+	return opts.BoshHost != "" || opts.BoshUser != "" || opts.BoshPassword != "" || opts.BoshCACert != ""
 }

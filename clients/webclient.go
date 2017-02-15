@@ -45,7 +45,9 @@ func NewProber(opts *Opts, bosh Bosh) (*Prober, error) {
 	return &prober, nil
 }
 
-func (p *Prober) RecordDowntime(interval, duration time.Duration) error {
+func (p *Prober) RecordDowntime() error {
+	interval := p.opts.Interval
+	duration := p.opts.Duration
 
 	var keepGoing func() bool
 
