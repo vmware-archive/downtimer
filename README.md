@@ -22,4 +22,4 @@ downtimer -u http://my-sample-app.engenv.cf-app.com \
 cd $GOPATH/src/github.com/pivotal-cf/downtimer/viewer
 go run main.go  # go to http://localhost:3000/index.html and select a downtime report
 ```
-
+![Viewer](/viewer/viewer-screenshot.png?raw=true "Downtime Viewer")
