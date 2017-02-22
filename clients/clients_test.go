@@ -1,10 +1,13 @@
 package clients_test
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/pivotal-cf/downtimer/clients"
+	"github.com/pivotal-cf/downtimer/clients/clientsfakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,15 +26,19 @@ var _ = Describe("Clients", func() {
 	var opts clients.Opts
 	var recordFile *os.File
 	var err error
+	var bosh clients.Bosh
 	BeforeEach(func() {
 		recordFile, err = ioutil.TempFile("", "downtime-report.csv")
 		Expect(err).NotTo(HaveOccurred())
-
 		recordFile.Write([]byte(sampleRecordFile))
 		opts = clients.Opts{
 			OutputFile: recordFile.Name(),
+			URL:        "http://localhost:54321/fake-url",
 		}
-		prober, err = clients.NewProber(&opts, nil)
+	})
+	JustBeforeEach(func() {
+		bosh = new(clientsfakes.FakeBosh)
+		prober, err = clients.NewProber(&opts, bosh)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -40,6 +47,22 @@ var _ = Describe("Clients", func() {
 	})
 
 	Describe("Prober", func() {
+		Context("recording downtime for given duration", func() {
+			BeforeEach(func() {
+				opts.Duration = 100*time.Millisecond + 2*time.Millisecond
+				opts.Interval = 5 * time.Millisecond
+			})
+			It("records n = (duration/interval) times", func() {
+				buf := make([]byte, 32*1024)
+				prober.RecordDowntime()
+				outputFile, err := os.Open(opts.OutputFile)
+				Expect(err).NotTo(HaveOccurred())
+				readBytesCount, err := outputFile.Read(buf)
+				Expect(err).NotTo(HaveOccurred())
+				lineCount := bytes.Count(buf[:readBytesCount], []byte{'\n'})
+				Expect(lineCount).To(Equal(20 + 1)) // +1 for header
+			})
+		})
 		Context("annotating the file", func() {
 			var deploymentTimes clients.DeploymentTimes
 			BeforeEach(func() {
@@ -57,5 +80,4 @@ var _ = Describe("Clients", func() {
 			})
 		})
 	})
-
 })
