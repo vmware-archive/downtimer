@@ -23,25 +23,27 @@ const sampleRecordFile = `timestamp,success,latency,code,size,fill,annotation
 
 var _ = Describe("Clients", func() {
 	var prober *clients.Prober
-	var opts clients.Opts
 	var recordFile *os.File
 	var err error
 	var bosh *clientsfakes.FakeBosh
+	var opts clients.Opts
 	BeforeEach(func() {
 		recordFile, err = ioutil.TempFile("", "downtime-report.csv")
 		Expect(err).NotTo(HaveOccurred())
 		recordFile.Write([]byte(sampleRecordFile))
+		bosh = new(clientsfakes.FakeBosh)
 		opts = clients.Opts{
 			OutputFile: recordFile.Name(),
 			URL:        "http://localhost:54321/fake-url",
+			Duration:   1*time.Second + 2*time.Millisecond,
+			Interval:   5 * time.Millisecond,
+			BoshTask:   "",
 		}
-		bosh = new(clientsfakes.FakeBosh)
 	})
 	JustBeforeEach(func() {
 		prober, err = clients.NewProber(&opts, bosh)
 		Expect(err).NotTo(HaveOccurred())
 	})
-
 	AfterEach(func() {
 		Expect(os.Remove(recordFile.Name())).ToNot(HaveOccurred())
 	})
@@ -49,8 +51,7 @@ var _ = Describe("Clients", func() {
 	Describe("Prober", func() {
 		Context("recording downtime for given duration", func() {
 			BeforeEach(func() {
-				opts.Duration = 100*time.Millisecond + 2*time.Millisecond
-				opts.Interval = 5 * time.Millisecond
+				opts.Duration = 10*time.Millisecond + 2*time.Millisecond
 			})
 			It("records n = (duration/interval) times", func() {
 				buf := make([]byte, 32*1024)
@@ -60,12 +61,12 @@ var _ = Describe("Clients", func() {
 				readBytesCount, err := outputFile.Read(buf)
 				Expect(err).NotTo(HaveOccurred())
 				lineCount := bytes.Count(buf[:readBytesCount], []byte{'\n'})
-				Expect(lineCount).To(Equal(20 + 1)) // +1 for header
+				Expect(lineCount).To(Equal(2 + 1)) // +1 for header
 			})
 		})
 		Context("recording downtime for running deployment", func() {
 			Context("when deployment isn't running anymore", func() {
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					opts.Duration = 0 * time.Second
 					opts.Interval = 5 * time.Millisecond
 					opts.BoshTask = "111"
@@ -87,7 +88,7 @@ var _ = Describe("Clients", func() {
 			Context("when deployment is ongoing", func() {
 				BeforeEach(func() {
 					opts.Duration = 0 * time.Second
-					opts.Interval = 5 * time.Millisecond
+					opts.Interval = 100 * time.Millisecond
 					opts.BoshTask = "111"
 
 					validTaskCount := 4

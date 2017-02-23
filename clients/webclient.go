@@ -49,29 +49,40 @@ func (p *Prober) RecordDowntime() error {
 	interval := p.opts.Interval
 	duration := p.opts.Duration
 
-	var keepGoing func() bool
+	/* Ticket starts ticking at instantiation. A minimal
+	   sleep offset is required to ensure that boshCheckTicker
+		 ticks before the prober proberTicker */
+	boshCheckTicker := time.NewTicker(interval)
+	time.Sleep(10 * time.Millisecond)
 
-	if p.opts.BoshTask != "" {
-		keepGoing = func() bool { // probe for as long as the deployment is ongoing
-			taskId, err := p.bosh.GetCurrentTaskId()
-			if err != nil {
-				log.Println(err)
+	proberTicker := time.NewTicker(interval)
+	timeout := make(<-chan time.Time)
+	boshTask := make(chan time.Time)
+
+	boshTaskStr := p.opts.BoshTask
+	if boshTaskStr != "" {
+		go func() {
+			for {
+				select {
+				case <-boshCheckTicker.C:
+					taskId, err := p.bosh.GetCurrentTaskId()
+					if err != nil {
+						log.Println(err)
+					}
+					optsTaskId, err := strconv.Atoi(boshTaskStr)
+					if err != nil {
+						log.Println(err)
+					}
+					if optsTaskId != taskId {
+						boshTask <- time.Now()
+					}
+				}
 			}
-			optsTaskId, err := strconv.Atoi(p.opts.BoshTask)
-			if err != nil {
-				log.Println(err)
-			}
-			return optsTaskId == taskId
-		}
-	} else if duration == 0 {
-		keepGoing = func() bool { // keep probing indefinitely
-			return true
-		}
-	} else {
-		keepGoing = func() bool { // probe for `duration`
-			duration = duration - interval
-			return duration >= 0
-		}
+		}()
+	}
+
+	if duration != 0 {
+		timeout = time.NewTimer(duration).C
 	}
 
 	outfile, err := os.Create(p.opts.OutputFile)
@@ -82,13 +93,17 @@ func (p *Prober) RecordDowntime() error {
 	csvWriter := csv.NewWriter(outfile)
 	defer outfile.Close()
 	csvWriter.Write([]string{"timestamp", "success", "latency", "code", "size", "", "annotation"})
-	for keepGoing() {
-		go func() {
+	for {
+		select {
+		case <-boshTask:
+			return nil
+		case <-proberTicker.C:
 			row := getCvsRow(p.Probe())
 			_ = csvWriter.Write(row)
 			csvWriter.Flush()
-		}()
-		time.Sleep(interval)
+		case <-timeout:
+			return nil
+		}
 	}
 	return nil
 }
