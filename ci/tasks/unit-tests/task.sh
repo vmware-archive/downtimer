@@ -9,4 +9,4 @@ export GOPATH=$PWD/go:$GOPATH
 cd go/src/github.com/pivotal-cf/downtimer
 
 godep restore
-ginkgo -r -race
+ginkgo -r -cover -race
