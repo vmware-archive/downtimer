@@ -136,7 +136,7 @@ d3.csv(path, function(d) {
   if (error) throw error;
 
   x.domain(d3.extent(data, function(d) { return d.timestamp; }));
-  y.domain(d3.extent(data, function(d) { return d.code }));
+  y.domain([0, 600]);
 
   var downtimeX = getDownTime(data);
 
