@@ -30,9 +30,10 @@ var _ = BeforeSuite(func() {
 	handler.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "I'm alive!")
 	})
+	handler.HandleFunc("/unavailable", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+	})
 	handler.Handle("/notfound", http.NotFoundHandler())
-	handler.Handle("/unavailable", http.TimeoutHandler(
-		http.NotFoundHandler(), 0, "Sorry"))
 	mockServer = httptest.NewServer(handler)
 })
 
