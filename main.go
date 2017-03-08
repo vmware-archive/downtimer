@@ -32,10 +32,7 @@ func main() {
 		}
 	}
 
-	prober, err := clients.NewProber(&opts, bosh)
-	if err != nil {
-		panic(err)
-	}
+	prober := clients.NewProber(&opts, bosh)
 
 	log.Println(fmt.Sprintf("Starting to probe %s every %s seconds", opts.URL, opts.Interval))
 	prober.RecordDowntime()

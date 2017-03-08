@@ -31,7 +31,7 @@ type Prober struct {
 
 type DeploymentTimes map[int64][]string
 
-func NewProber(opts *Opts, bosh Bosh) (*Prober, error) {
+func NewProber(opts *Opts, bosh Bosh) *Prober {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.InsecureSkipVerify},
 	}
@@ -42,7 +42,7 @@ func NewProber(opts *Opts, bosh Bosh) (*Prober, error) {
 		opts,
 		bosh,
 	}
-	return &prober, nil
+	return &prober
 }
 
 func (p *Prober) RecordDowntime() error {
