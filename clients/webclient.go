@@ -7,10 +7,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/spf13/afero"
 )
 
 type Result struct {
@@ -28,6 +29,8 @@ type Prober struct {
 	opts   *Opts
 	bosh   Bosh
 }
+
+var FS = afero.NewOsFs()
 
 type DeploymentTimes map[int64][]string
 
@@ -85,7 +88,7 @@ func (p *Prober) RecordDowntime() error {
 		timeout = time.NewTimer(duration).C
 	}
 
-	outfile, err := os.Create(p.opts.OutputFile)
+	outfile, err := FS.Create(p.opts.OutputFile)
 	if err != nil {
 		return err
 	}
@@ -110,12 +113,12 @@ func (p *Prober) RecordDowntime() error {
 
 func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) error {
 
-	annotatedFile, err := os.Create(p.opts.OutputFile + "-annotated")
+	annotatedFile, err := FS.Create(p.opts.OutputFile + "-annotated")
 	if err != nil {
 		return err
 	}
 
-	inputFile, err := os.Open(p.opts.OutputFile)
+	inputFile, err := FS.Open(p.opts.OutputFile)
 
 	if err != nil {
 		return err
@@ -157,7 +160,7 @@ func (p *Prober) AnnotateWithTimestamps(timestamps DeploymentTimes) error {
 		csvWriter.Flush()
 	}
 
-	os.Rename(p.opts.OutputFile+"-annotated", p.opts.OutputFile)
+	FS.Rename(p.opts.OutputFile+"-annotated", p.opts.OutputFile)
 	return nil
 }
 

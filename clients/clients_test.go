@@ -11,6 +11,7 @@ import (
 
 	"github.com/pivotal-cf/downtimer/clients"
 	"github.com/pivotal-cf/downtimer/clients/clientsfakes"
+	"github.com/spf13/afero"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -39,12 +40,14 @@ var _ = BeforeSuite(func() {
 
 var _ = Describe("Clients", func() {
 	var prober *clients.Prober
-	var recordFile *os.File
+	var recordFile afero.File
 	var err error
 	var bosh *clientsfakes.FakeBosh
 	var opts clients.Opts
 	BeforeEach(func() {
-		recordFile, err = ioutil.TempFile("", "downtime-report.csv")
+		clients.FS = afero.NewMemMapFs()
+
+		recordFile, err = afero.TempFile(clients.FS, "", "downtime-report.csv")
 		Expect(err).NotTo(HaveOccurred())
 		recordFile.Write([]byte(sampleRecordFile))
 		bosh = new(clientsfakes.FakeBosh)
@@ -60,7 +63,6 @@ var _ = Describe("Clients", func() {
 		prober = clients.NewProber(&opts, bosh)
 	})
 	AfterEach(func() {
-		Expect(os.Remove(recordFile.Name())).ToNot(HaveOccurred())
 	})
 
 	Describe("Prober", func() {
@@ -110,7 +112,7 @@ var _ = Describe("Clients", func() {
 			It("records n = (duration/interval) times", func() {
 				buf := make([]byte, 32*1024)
 				prober.RecordDowntime()
-				outputFile, err := os.Open(opts.OutputFile)
+				outputFile, err := clients.FS.Open(opts.OutputFile)
 				Expect(err).NotTo(HaveOccurred())
 				readBytesCount, err := outputFile.Read(buf)
 				Expect(err).NotTo(HaveOccurred())
@@ -133,7 +135,7 @@ var _ = Describe("Clients", func() {
 				It("should not record anything ", func() {
 					buf := make([]byte, 32*1024)
 					prober.RecordDowntime()
-					outputFile, err := os.Open(opts.OutputFile)
+					outputFile, err := clients.FS.Open(opts.OutputFile)
 					Expect(err).NotTo(HaveOccurred())
 					_, err = outputFile.Read(buf)
 					Expect(err).To(MatchError("EOF"))
@@ -159,7 +161,7 @@ var _ = Describe("Clients", func() {
 				It("should record for the duration of deployment", func() {
 					buf := make([]byte, 32*1024)
 					prober.RecordDowntime()
-					outputFile, err := os.Open(opts.OutputFile)
+					outputFile, err := clients.FS.Open(opts.OutputFile)
 					Expect(err).NotTo(HaveOccurred())
 					readBytesCount, err := outputFile.Read(buf)
 					Expect(err).NotTo(HaveOccurred())
@@ -168,20 +170,44 @@ var _ = Describe("Clients", func() {
 				})
 			})
 		})
-		Context("annotating the file", func() {
+		Describe("Prober.AnnotateWithTimestamp", func() {
 			var deploymentTimes clients.DeploymentTimes
 			BeforeEach(func() {
 				deploymentTimes = clients.DeploymentTimes{}
 				deploymentTimes[123] = []string{"doppler done", "diego start"}
 			})
-			It("doesn't choke on a CSV header", func() {
+			It("can handle a CSV header", func() {
 				err := prober.AnnotateWithTimestamps(deploymentTimes)
 				Expect(err).NotTo(HaveOccurred())
-				f, err := os.Open(opts.OutputFile)
+				f, err := clients.FS.Open(opts.OutputFile)
 				Expect(err).NotTo(HaveOccurred())
 				rewrittenFile, err := ioutil.ReadAll(f)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(rewrittenFile)).To(ContainSubstring("doppler done"))
+			})
+			Context("when the output file cannot be read", func() {
+				BeforeEach(func() {
+					corruptCsvFile := "/output.csv"
+					opts.OutputFile = corruptCsvFile
+					file, err := clients.FS.OpenFile(corruptCsvFile, os.O_CREATE, 0600)
+					Expect(err).NotTo(HaveOccurred())
+					file.WriteString(sampleRecordFile)
+					file.WriteString("131415,1,3")
+				})
+				It("returns an error", func() {
+					err := prober.AnnotateWithTimestamps(deploymentTimes)
+					Expect(err.Error()).To(ContainSubstring("wrong number of fields in line"))
+				})
+			})
+			Context("when the output file  ", func() {
+				BeforeEach(func() {
+					badFileName := "/output.csv"
+					opts.OutputFile = badFileName
+				})
+				It("returns an error", func() {
+					err := prober.AnnotateWithTimestamps(deploymentTimes)
+					Expect(err.Error()).To(ContainSubstring("file does not exist"))
+				})
 			})
 		})
 	})
