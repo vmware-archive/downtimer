@@ -26,6 +26,7 @@ const sampleRecordFile = `timestamp,success,latency,code,size,fill,annotation
 `
 
 var mockServer *httptest.Server
+var mockTLSServer *httptest.Server
 var _ = BeforeSuite(func() {
 	handler := http.NewServeMux()
 	handler.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +37,7 @@ var _ = BeforeSuite(func() {
 	})
 	handler.Handle("/notfound", http.NotFoundHandler())
 	mockServer = httptest.NewServer(handler)
+	mockTLSServer = httptest.NewTLSServer(handler)
 })
 
 var _ = Describe("Clients", func() {
@@ -46,18 +48,7 @@ var _ = Describe("Clients", func() {
 	var opts clients.Opts
 	BeforeEach(func() {
 		clients.FS = afero.NewMemMapFs()
-
-		recordFile, err = afero.TempFile(clients.FS, "", "downtime-report.csv")
-		Expect(err).NotTo(HaveOccurred())
-		recordFile.Write([]byte(sampleRecordFile))
 		bosh = new(clientsfakes.FakeBosh)
-		opts = clients.Opts{
-			OutputFile: recordFile.Name(),
-			URL:        mockServer.URL + "/health",
-			Duration:   1*time.Second + 2*time.Millisecond,
-			Interval:   5 * time.Millisecond,
-			BoshTask:   "",
-		}
 	})
 	JustBeforeEach(func() {
 		prober = clients.NewProber(&opts, bosh)
@@ -67,6 +58,30 @@ var _ = Describe("Clients", func() {
 
 	Describe("Prober", func() {
 		Describe("Prober.Probe", func() {
+			BeforeEach(func() {
+				recordFile, err = afero.TempFile(clients.FS, "", "downtime-report.csv")
+				Expect(err).NotTo(HaveOccurred())
+				recordFile.Write([]byte(sampleRecordFile))
+				opts = clients.Opts{
+					OutputFile: recordFile.Name(),
+					URL:        mockServer.URL + "/health",
+					Duration:   1*time.Second + 2*time.Millisecond,
+					Interval:   5 * time.Millisecond,
+					BoshTask:   "",
+				}
+			})
+			Context("when the URL responds with HTTP 200 with TLS", func() {
+				BeforeEach(func() {
+					opts.URL = mockTLSServer.URL + "/health"
+					opts.InsecureSkipVerify = true
+				})
+				It("returns status 1 on success", func() {
+					result := prober.Probe()
+					fmt.Println(result, "\n\n\n")
+					Expect(result.StatusCode).To(Equal(200))
+					Expect(result.Success).To(Equal(1))
+				})
+			})
 			Context("when the URL responds with HTTP 200", func() {
 				It("returns status 1 on success", func() {
 					result := prober.Probe()
@@ -105,60 +120,13 @@ var _ = Describe("Clients", func() {
 				})
 			})
 		})
-		Context("recording downtime for given duration", func() {
-			BeforeEach(func() {
-				opts.Duration = 10*time.Millisecond + 2*time.Millisecond
-			})
-			It("records n = (duration/interval) times", func() {
-				buf := make([]byte, 32*1024)
-				prober.RecordDowntime()
-				outputFile, err := clients.FS.Open(opts.OutputFile)
-				Expect(err).NotTo(HaveOccurred())
-				readBytesCount, err := outputFile.Read(buf)
-				Expect(err).NotTo(HaveOccurred())
-				lineCount := bytes.Count(buf[:readBytesCount], []byte{'\n'})
-				Expect(lineCount).To(Equal(2 + 1)) // +1 for header
-			})
-		})
-		Context("recording downtime for running deployment", func() {
-			Context("when deployment isn't running anymore", func() {
-				JustBeforeEach(func() {
-					opts.Duration = 0 * time.Second
-					opts.Interval = 5 * time.Millisecond
-					opts.BoshTask = "111"
-
-					bosh.GetCurrentTaskIdStub = func() (int, error) {
-						return 0, nil
-					}
-
-				})
-				It("should not record anything ", func() {
-					buf := make([]byte, 32*1024)
-					prober.RecordDowntime()
-					outputFile, err := clients.FS.Open(opts.OutputFile)
-					Expect(err).NotTo(HaveOccurred())
-					_, err = outputFile.Read(buf)
-					Expect(err).To(MatchError("EOF"))
-				})
-			})
-			Context("when deployment is ongoing", func() {
+		Describe("Prober.RecordDowntime()", func() {
+			Context("recording downtime for given duration", func() {
 				BeforeEach(func() {
-					opts.Duration = 0 * time.Second
-					opts.Interval = 100 * time.Millisecond
-					opts.BoshTask = "111"
-
-					validTaskCount := 4
-
-					bosh.GetCurrentTaskIdStub = func() (int, error) {
-						if validTaskCount > 0 {
-							validTaskCount -= 1
-							return 111, nil
-						}
-						return 0, nil
-					}
-
+					opts.Duration = 10*time.Millisecond + 2*time.Millisecond
+					opts.Interval = 5 * time.Millisecond
 				})
-				It("should record for the duration of deployment", func() {
+				It("records n = (duration/interval) times", func() {
 					buf := make([]byte, 32*1024)
 					prober.RecordDowntime()
 					outputFile, err := clients.FS.Open(opts.OutputFile)
@@ -166,7 +134,57 @@ var _ = Describe("Clients", func() {
 					readBytesCount, err := outputFile.Read(buf)
 					Expect(err).NotTo(HaveOccurred())
 					lineCount := bytes.Count(buf[:readBytesCount], []byte{'\n'})
-					Expect(lineCount).To(Equal(4 + 1)) // +1 for header
+					Expect(lineCount).To(Equal(2 + 1)) // +1 for header
+				})
+			})
+			Context("recording downtime for running deployment", func() {
+				Context("when deployment isn't running anymore", func() {
+					JustBeforeEach(func() {
+						opts.Duration = 0 * time.Second
+						opts.Interval = 5 * time.Millisecond
+						opts.BoshTask = "111"
+
+						bosh.GetCurrentTaskIdStub = func() (int, error) {
+							return 0, nil
+						}
+
+					})
+					It("should not record anything ", func() {
+						buf := make([]byte, 32*1024)
+						prober.RecordDowntime()
+						outputFile, err := clients.FS.Open(opts.OutputFile)
+						Expect(err).NotTo(HaveOccurred())
+						_, err = outputFile.Read(buf)
+						Expect(err).To(MatchError("EOF"))
+					})
+				})
+				Context("when deployment is ongoing", func() {
+					BeforeEach(func() {
+						opts.Duration = 0 * time.Second
+						opts.Interval = 100 * time.Millisecond
+						opts.BoshTask = "111"
+
+						validTaskCount := 4
+
+						bosh.GetCurrentTaskIdStub = func() (int, error) {
+							if validTaskCount > 0 {
+								validTaskCount -= 1
+								return 111, nil
+							}
+							return 0, nil
+						}
+
+					})
+					It("should record for the duration of deployment", func() {
+						buf := make([]byte, 32*1024)
+						prober.RecordDowntime()
+						outputFile, err := clients.FS.Open(opts.OutputFile)
+						Expect(err).NotTo(HaveOccurred())
+						readBytesCount, err := outputFile.Read(buf)
+						Expect(err).NotTo(HaveOccurred())
+						lineCount := bytes.Count(buf[:readBytesCount], []byte{'\n'})
+						Expect(lineCount).To(Equal(4 + 1)) // +1 for header
+					})
 				})
 			})
 		})
@@ -176,14 +194,22 @@ var _ = Describe("Clients", func() {
 				deploymentTimes = clients.DeploymentTimes{}
 				deploymentTimes[123] = []string{"doppler done", "diego start"}
 			})
-			It("can handle a CSV header", func() {
-				err := prober.AnnotateWithTimestamps(deploymentTimes)
-				Expect(err).NotTo(HaveOccurred())
-				f, err := clients.FS.Open(opts.OutputFile)
-				Expect(err).NotTo(HaveOccurred())
-				rewrittenFile, err := ioutil.ReadAll(f)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(rewrittenFile)).To(ContainSubstring("doppler done"))
+			Context("when parsing a CSV file", func() {
+				BeforeEach(func() {
+					recordFile, err = afero.TempFile(clients.FS, "", "downtime-report.csv")
+					Expect(err).NotTo(HaveOccurred())
+					recordFile.Write([]byte(sampleRecordFile))
+					opts.OutputFile = recordFile.Name()
+				})
+				It("can handle a CSV header", func() {
+					err := prober.AnnotateWithTimestamps(deploymentTimes)
+					Expect(err).NotTo(HaveOccurred())
+					f, err := clients.FS.Open(opts.OutputFile)
+					Expect(err).NotTo(HaveOccurred())
+					rewrittenFile, err := ioutil.ReadAll(f)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(rewrittenFile)).To(ContainSubstring("doppler done"))
+				})
 			})
 			Context("when the output file cannot be read", func() {
 				BeforeEach(func() {

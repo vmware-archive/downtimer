@@ -38,27 +38,21 @@ func NewProber(opts *Opts, bosh Bosh) *Prober {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.InsecureSkipVerify},
 	}
+	client := http.Client{Transport: transport}
+	prober := Prober{opts.URL, client, opts, bosh}
 
-	prober := Prober{
-		opts.URL,
-		http.Client{Transport: transport},
-		opts,
-		bosh,
-	}
 	return &prober
 }
 
 func (p *Prober) RecordDowntime() error {
-	interval := p.opts.Interval
-	duration := p.opts.Duration
 
 	/* Ticket starts ticking at instantiation. A minimal
 	   sleep offset is required to ensure that boshCheckTicker
 		 ticks before the prober proberTicker */
-	boshCheckTicker := time.NewTicker(interval)
+	boshCheckTicker := time.NewTicker(p.opts.Interval)
 	time.Sleep(10 * time.Millisecond)
 
-	proberTicker := time.NewTicker(interval)
+	proberTicker := time.NewTicker(p.opts.Interval)
 	timeout := make(<-chan time.Time)
 	boshTask := make(chan time.Time)
 
@@ -84,8 +78,8 @@ func (p *Prober) RecordDowntime() error {
 		}()
 	}
 
-	if duration != 0 {
-		timeout = time.NewTimer(duration).C
+	if p.opts.Duration != 0 {
+		timeout = time.NewTimer(p.opts.Duration).C
 	}
 
 	outfile, err := FS.Create(p.opts.OutputFile)
