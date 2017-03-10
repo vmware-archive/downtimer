@@ -14,8 +14,8 @@
 		},
 		{
 			"ImportPath": "github.com/cheggaaa/pb",
-			"Comment": "v1.0.7",
-			"Rev": "d7e6ca3010b6f084d8056847f55d7f572f180678"
+			"Comment": "v1.0.9",
+			"Rev": "bd1f886442f85613c68401483d34fc7ed9d70ca7"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-cli/director",
@@ -85,7 +85,7 @@
 		},
 		{
 			"ImportPath": "github.com/jessevdk/go-flags",
-			"Comment": "v1.1-5-g4e64e4a",
+			"Comment": "v1.1.0-5-g4e64e4a",
 			"Rev": "4e64e4a4e2552194cf594243e23aa9baf3b4297e"
 		},
 		{
