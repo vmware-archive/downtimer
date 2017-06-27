@@ -14,33 +14,33 @@
 		},
 		{
 			"ImportPath": "github.com/cheggaaa/pb",
-			"Comment": "v1.0.9",
-			"Rev": "bd1f886442f85613c68401483d34fc7ed9d70ca7"
+			"Comment": "v1.0.7",
+			"Rev": "d7e6ca3010b6f084d8056847f55d7f572f180678"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-cli/director",
-			"Comment": "v0.0.159",
-			"Rev": "b57c34127f35c52b6518808fe0f91d85dd6c0039"
+			"Comment": "v2.0.26",
+			"Rev": "105157c38524ddbb8367c868afa06eb00f285125"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-cli/uaa",
-			"Comment": "v0.0.159",
-			"Rev": "b57c34127f35c52b6518808fe0f91d85dd6c0039"
+			"Comment": "v2.0.26",
+			"Rev": "105157c38524ddbb8367c868afa06eb00f285125"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-cli/ui",
-			"Comment": "v0.0.159",
-			"Rev": "b57c34127f35c52b6518808fe0f91d85dd6c0039"
+			"Comment": "v2.0.26",
+			"Rev": "105157c38524ddbb8367c868afa06eb00f285125"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-cli/ui/fmt",
-			"Comment": "v0.0.159",
-			"Rev": "b57c34127f35c52b6518808fe0f91d85dd6c0039"
+			"Comment": "v2.0.26",
+			"Rev": "105157c38524ddbb8367c868afa06eb00f285125"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-cli/ui/table",
-			"Comment": "v0.0.159",
-			"Rev": "b57c34127f35c52b6518808fe0f91d85dd6c0039"
+			"Comment": "v2.0.26",
+			"Rev": "105157c38524ddbb8367c868afa06eb00f285125"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-utils/crypto",
@@ -89,8 +89,8 @@
 		},
 		{
 			"ImportPath": "github.com/jessevdk/go-flags",
-			"Comment": "v1.1.0-5-g4e64e4a",
-			"Rev": "4e64e4a4e2552194cf594243e23aa9baf3b4297e"
+			"Comment": "v1.2.0-3-g5695738",
+			"Rev": "5695738f733662da3e9afc2283bba6f3c879002d"
 		},
 		{
 			"ImportPath": "github.com/mattn/go-colorable",
@@ -288,11 +288,11 @@
 		},
 		{
 			"ImportPath": "golang.org/x/text/transform",
-			"Rev": "f28f36722d5ef2f9655ad3de1f248e3e52ad5ebd"
+			"Rev": "6353ef0f924300eea566d3438817aa4d3374817e"
 		},
 		{
 			"ImportPath": "golang.org/x/text/unicode/norm",
-			"Rev": "f28f36722d5ef2f9655ad3de1f248e3e52ad5ebd"
+			"Rev": "6353ef0f924300eea566d3438817aa4d3374817e"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
