@@ -43,32 +43,36 @@
 			"Rev": "b57c34127f35c52b6518808fe0f91d85dd6c0039"
 		},
 		{
+			"ImportPath": "github.com/cloudfoundry/bosh-utils/crypto",
+			"Rev": "ff59874992800c74d1f73768b46a101d7ce57760"
+		},
+		{
 			"ImportPath": "github.com/cloudfoundry/bosh-utils/errors",
-			"Rev": "5ea2f70197ed6eb354f2d6bc2352b2ca18935e70"
+			"Rev": "ff59874992800c74d1f73768b46a101d7ce57760"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-utils/http",
-			"Rev": "5ea2f70197ed6eb354f2d6bc2352b2ca18935e70"
+			"Rev": "ff59874992800c74d1f73768b46a101d7ce57760"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-utils/httpclient",
-			"Rev": "5ea2f70197ed6eb354f2d6bc2352b2ca18935e70"
+			"Rev": "ff59874992800c74d1f73768b46a101d7ce57760"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-utils/logger",
-			"Rev": "5ea2f70197ed6eb354f2d6bc2352b2ca18935e70"
+			"Rev": "ff59874992800c74d1f73768b46a101d7ce57760"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-utils/retrystrategy",
-			"Rev": "5ea2f70197ed6eb354f2d6bc2352b2ca18935e70"
+			"Rev": "ff59874992800c74d1f73768b46a101d7ce57760"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-utils/system",
-			"Rev": "5ea2f70197ed6eb354f2d6bc2352b2ca18935e70"
+			"Rev": "ff59874992800c74d1f73768b46a101d7ce57760"
 		},
 		{
 			"ImportPath": "github.com/cloudfoundry/bosh-utils/uuid",
-			"Rev": "5ea2f70197ed6eb354f2d6bc2352b2ca18935e70"
+			"Rev": "ff59874992800c74d1f73768b46a101d7ce57760"
 		},
 		{
 			"ImportPath": "github.com/cppforlife/go-semi-semantic/version",
