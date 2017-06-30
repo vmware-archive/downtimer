@@ -31,6 +31,7 @@ func main() {
 	opts := clients.Opts{}
 	err := ParseArgs(&opts, os.Args)
 	if err != nil {
+		log.Println(err)
 		os.Exit(1)
 	}
 

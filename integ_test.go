@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -56,6 +57,7 @@ var _ = Describe("Downtimer", func() {
 				command := exec.Command(binaryPath, "-u", "http://pivotal.io", "-d", "3s", "-b", "bosh-director.pivotal.io")
 				session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
+				Eventually(session.Err).Should(gbytes.Say("all bosh options must be specified"))
 				Eventually(session).Should(gexec.Exit(1))
 			})
 			It("checks bosh if bosh director/user/password/ca-certs is specified", func() {
