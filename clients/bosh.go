@@ -80,6 +80,10 @@ func (b *BoshImpl) GetCurrentTaskId() (int, error) {
 	return currentTaskId, nil
 }
 
+func (b *BoshImpl) IsAuthenticated() (bool, error) {
+	return b.director.IsAuthenticated()
+}
+
 func (b *BoshImpl) WaitForTaskId(timeout time.Duration) int {
 	timeoutChannel := time.After(timeout)
 	tick := time.Tick(5 * time.Second)

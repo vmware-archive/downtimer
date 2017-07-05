@@ -43,6 +43,11 @@ func main() {
 			panic(err)
 		}
 
+		if ok, err := bosh.IsAuthenticated(); !ok {
+			log.Println(err)
+			os.Exit(3)
+		}
+
 		if opts.BoshTask == "" {
 			opts.BoshTask = strconv.Itoa(bosh.WaitForTaskId(180 * time.Second))
 		}
