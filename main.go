@@ -50,6 +50,10 @@ func main() {
 
 		if opts.BoshTask == "" {
 			opts.BoshTask = strconv.Itoa(bosh.WaitForTaskId(180 * time.Second))
+			if opts.BoshTask == "0" {
+				log.Println("Timed out waiting for deployment task")
+				os.Exit(4)
+			}
 		}
 	}
 
