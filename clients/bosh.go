@@ -18,6 +18,7 @@ package clients
 import (
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -123,8 +124,7 @@ func userConfig(host string, port int, CACert, username, password string) direct
 }
 
 func GetDirector(host string, port int, username, password, caCertFile string) (*BoshImpl, error) {
-
-	logger := logger.NewLogger(0)
+	logger := logger.NewWriterLogger(0, os.Stderr, os.Stderr)
 	caCertBytes, err := ioutil.ReadFile(caCertFile)
 	if err != nil {
 		return nil, err
