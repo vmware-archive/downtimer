@@ -38,7 +38,7 @@ func main() {
 	var bosh *clients.BoshImpl
 
 	if useBosh(&opts) {
-		bosh, err = clients.GetDirector(opts.BoshHost, 25555, opts.BoshUser, opts.BoshPassword, opts.BoshCACert)
+		bosh, err = clients.GetDirector(opts.BoshHost, 25555, opts.BoshUser, opts.BoshPassword, opts.BoshCACert, opts.LogFile)
 		if err != nil {
 			panic(err)
 		}

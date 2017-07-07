@@ -123,8 +123,12 @@ func userConfig(host string, port int, CACert, username, password string) direct
 	return config
 }
 
-func GetDirector(host string, port int, username, password, caCertFile string) (*BoshImpl, error) {
-	logger := logger.NewWriterLogger(0, os.Stderr, os.Stderr)
+func GetDirector(host string, port int, username, password, caCertFile, logFile string) (*BoshImpl, error) {
+	log, err := os.Create(logFile)
+	if err != nil {
+		return nil, err
+	}
+	logger := logger.NewWriterLogger(0, log, log)
 	caCertBytes, err := ioutil.ReadFile(caCertFile)
 	if err != nil {
 		return nil, err
